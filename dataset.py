@@ -1,15 +1,15 @@
 import os
 
-import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
 
-class Resist2(Dataset):
-    def __init__(self, root='dataset', normalize=False):
+class Resist(Dataset):
+    def __init__(self, root='dataset', csv_file='resist2.csv', n_resists=15, normalize=False):
         self.normalize = normalize
-        self.csv_path = os.path.join(root, 'resist2.csv')
+        self.csv_path = os.path.join(root, csv_file)
+        self.n_resists = n_resists
         
         self.resists, self.depths, self.rhos = self._get_data()
         
@@ -20,8 +20,14 @@ class Resist2(Dataset):
         return self.resists[idx], self.depths[idx], self.rhos[idx]
     
     def _get_data(self):
-        data = pd.read_csv(self.csv_path, header=None).astype(np.float32).to_numpy()
-        if self.normalize:
-            data = data/data.max(axis=0)
-        resists, depths, rhos = data[:, :15], data[:, 15:16], data[:, 16:]
+        df = pd.read_csv(self.csv_path, header=None)
+        
+        n_targets = len(df.columns) - self.n_resists
+        n_depths = n_targets//2
+        n_rhos = n_targets - n_depths
+        
+        resists = df.iloc(axis=1)[:self.n_resists].astype('float32').to_numpy()
+        depths = df.iloc(axis=1)[self.n_resists:self.n_resists + n_depths].astype('float32').to_numpy()
+        rhos = df.iloc(axis=1)[-n_rhos:].astype('float32').to_numpy()
+    
         return torch.tensor(resists), torch.tensor(depths), torch.tensor(rhos)
